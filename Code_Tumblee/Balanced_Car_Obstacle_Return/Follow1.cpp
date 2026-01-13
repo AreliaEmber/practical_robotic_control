@@ -34,7 +34,7 @@ enum RobotState {
 RobotState current_state = STATE_STARTUP;
 unsigned long turn_start_time = 0;
 unsigned long startup_start_time = 0;
-const unsigned long TURN_180_TIME = 10000;  // Zeit für 180° Drehung (in ms)
+const unsigned long TURN_180_TIME = 11000;  // Zeit für 180° Drehung (in ms)
 
 // ---------- IRLine ----------
 void IRLine::Pin_init()

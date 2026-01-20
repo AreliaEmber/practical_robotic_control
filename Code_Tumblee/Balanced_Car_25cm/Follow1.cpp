@@ -93,6 +93,8 @@ volatile double Ultrasonic::distance_value = 0.0;
 // ---------- FOLLOW MODE 1 ----------
 void Function::Follow_Mode1()
 {
+
+    IR.Send();
     Ultrasonic.Get_Distance();
     IR.Read();
     
@@ -218,5 +220,22 @@ void Ultrasonic::Check()
     Balanced.Motion_Control(FORWARD);
   } else {
     Balanced.Stop();
+  }
+}
+
+void IRLine::Send()
+{
+  static unsigned long ir_send_time;
+
+  if (millis() - ir_send_time > 15)
+  {
+    for (int i = 0; i < 39; i++)
+    { 
+      digitalWrite(IR_SEND_PIN, LOW);
+      delayMicroseconds(9);
+      digitalWrite(IR_SEND_PIN, HIGH);
+      delayMicroseconds(9);
+    }
+    ir_send_time = millis();
   }
 }

@@ -35,7 +35,16 @@ class IRLine
 {
 public:
   void Pin_init();
-  void Read();            
+  void Read();
+  //New
+  void Check();
+  void Send();
+  void Filter();
+  static void Left_Receive();
+  static void Right_Receive();
+  static int left_is_obstacle;
+  static int right_is_obstacle;   
+  //new         
   
   // Getter
   int LeftRaw() const { return left_raw; }
@@ -51,6 +60,10 @@ public:
   
   
 private:
+  //new
+  #define RECV_PIN 9
+  #define IR_SEND_PIN 9
+  //new
   #define IR_LEFT_PIN  A0
   #define IR_RIGHT_PIN A1
   #define IR_THRESHOLD 750

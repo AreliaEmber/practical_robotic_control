@@ -26,7 +26,8 @@ enum RobotState {
     STATE_STARTUP,     // Initialisierungsphase
     STATE_FOLLOW,      // Normales Linienfolgen
     STATE_OBSTACLE,    // Hindernis erkannt
-    STATE_TURNING,     // Dreht sich 180 Grad
+    STATE_RIGHT_TURN,     // Dreht sich 90 Grad
+    STATE_LEFT_TURN, 
     STATE_SEARCH       // Sucht nach Linie
 };
 
@@ -99,92 +100,134 @@ void Function::Follow_Mode1()
         switch(current_state) {
             
             case STATE_STARTUP:
-                // Initialisierungsphase beim Start
-                dbg_state = 100;  // STARTUP SUCCESS
-                Balanced.Stop();
-                delay(2000);
-                current_state = STATE_FOLLOW;
-            
+                Follow_Mode_Startup()
                 break;
             
             case STATE_FOLLOW:
-                // Normales Linienfolgen
-                if (Ultrasonic.distance_value < SAFE_DISTANCE) {
-                    // HINDERNIS ERKANNT
-                    rgb.blueOn();
-                    Balanced.Stop();
-                    current_state = STATE_TURNING;
-                    turn_start_time = millis();
-                    dbg_state = 1;  // STOP - Hindernis
-                } 
-                else if (!IR.IsOnLine()) {
-                    // nicht auf Linie, Suchmodus
-                    dbg_state = 10;  // SEARCH
-                    Balanced.Forward(4);  // Sehr langsam vorwärts
-                } 
-                else {
-                    // LINIE GEFUNDEN: TRACKING
-                    bool L = IR.LeftOnLine();
-                    bool R = IR.RightOnLine();
-                    
-                    if (!L && !R) {
-                        // Beide perfekt neben der Linie: Geradeaus
-                        Balanced.Forward(4);
-                        dbg_state = 2;
-                    } 
-                    else if (L && !R) {
-                        // Nur links: Rechts korrigieren
-                        Balanced.Right(12);
-                        dbg_state = 3;
-                    } 
-                    else if (!L && R) {
-                        // Nur rechts: Links korrigieren
-                        Balanced.Left(12);
-                        dbg_state = 4;
-                    } 
-                    else {
-                        // Beide auf Linie: Nach rechts korrigieren
-                        Balanced.Right(4);
-                        dbg_state = 5;
-                    }
-                }
+                Follow_Mode_Follow()
                 break;
                 
-            case STATE_TURNING:
-                // 180 Grad Drehung
-                Balanced.CurveRight(0, 30);  // Nach rechts drehen
-                
-                if (millis() - turn_start_time >= TURN_180_TIME) {
-                    // 180° Drehung abgeschlossen
-                    Balanced.Stop();
-                    current_state = STATE_SEARCH;
-                    dbg_state = 11;  // TURNING COMPLETE
-                }
+            case STATE_RIGHT_TURN:
+                Follow_Mode_Right_Turn()
                 break;
                 
             case STATE_SEARCH:
-                rgb.off();
-                // Nach Hindernis nach der Linie suchen
-                if (Ultrasonic.distance_value < SAFE_DISTANCE) {
-                    // Immer noch Hindernis da - nochmal drehen
-                    Balanced.Stop();
-                    current_state = STATE_TURNING;
-                    turn_start_time = millis();
-                    dbg_state = 1;
-                } 
-                else if (IR.IsOnLine()) {
-                    // Linie gefunden - zurück zum normalen Folgen
-                    current_state = STATE_FOLLOW;
-                    dbg_state = 20;  // LINE FOUND - RESUME FOLLOW
-                } 
-                else {
-                    // Noch keine Linie - weiter suchen
-                    Balanced.Forward(4);  // Langsam vorwärts
-                    dbg_state = 12;  // SEARCHING
-                }
+                Follow_Mode_Search()
                 break;
         }
     }
+}
+
+void Function::Follow_Mode_Startup()
+{
+    // Initialisierungsphase beim Start
+    dbg_state = 100;  // STARTUP SUCCESS
+    Balanced.Stop();
+    delay(2000);
+    Enter_Follow_Mode();
+}
+
+void Function::Follow_Mode_Follow()
+{
+    // Normales Linienfolgen
+    if (Ultrasonic.distance_value < SAFE_DISTANCE) {
+        // HINDERNIS ERKANNT
+        Obstacle_Found();
+        return;
+    } 
+    if (!IR.IsOnLine()) {
+        // nicht auf Linie, Suchmodus
+        dbg_state = 10;  // SEARCH
+        Balanced.Forward(4);  // Sehr langsam vorwärts
+        return;
+    } 
+    // LINIE GEFUNDEN: TRACKING
+    bool L = IR.LeftOnLine();
+    bool R = IR.RightOnLine();
+    
+    if (!L && !R) {
+        // Beide perfekt neben der Linie: Geradeaus
+        Balanced.Forward(4);
+        dbg_state = 2;
+    } 
+    else if (L && !R) {
+        // Nur links: Rechts korrigieren
+        Balanced.Right(12);
+        dbg_state = 3;
+    } 
+    else if (!L && R) {
+        // Nur rechts: Links korrigieren
+        Balanced.Left(12);
+        dbg_state = 4;
+    } 
+    else {
+        // Beide auf Linie: Nach rechts korrigieren
+        Balanced.Right(4);
+        dbg_state = 5;
+    }
+}
+void Function::Follow_Mode_Right_Turn()
+{
+    Balanced.CurveRight(0, 30);  // Nach rechts drehen
+    
+    if (millis() - turn_start_time >= TURN_180_TIME/2) { // nun 90 grad drehung statt 180 grad
+        // Drehung abgeschlossen
+        Balanced.Stop();
+        current_state = STATE_SEARCH;
+        dbg_state = 11;  // TURNING COMPLETE
+    }
+}
+void Function::Follow_Mode_Left_Turn()
+{
+    Balanced.CurveLeft(0, 30);  // Nach links drehen
+    
+    if (millis() - turn_start_time >= TURN_180_TIME/2) { // nun 90 grad drehung statt 180 grad
+        // Drehung abgeschlossen
+        Balanced.Stop();
+        current_state = STATE_SEARCH;
+        dbg_state = 11;  // TURNING COMPLETE
+    }
+}
+void Function::Follow_Mode_Search()
+{
+    // Nach Hindernis nach der Linie suchen
+    if (Ultrasonic.distance_value < SAFE_DISTANCE) {
+        // Immer noch Hindernis da - nochmal drehen
+        Obstacle_Found();
+    } 
+    else if (IR.IsOnLine()) {
+        // Linie gefunden - zurück zum normalen Folgen
+        Enter_Follow_Mode();
+        dbg_state = 20;  // LINE FOUND - RESUME FOLLOW
+    } 
+    else {
+        // Noch keine Linie - weiter suchen
+        Balanced.Forward(4);  // Langsam vorwärts
+        dbg_state = 12;  // SEARCHING
+    }
+}
+// void Function::Follow_Mode_Etc()
+// {
+
+// }
+
+void Function::Enter_Follow_Mode()
+{
+    rgb.greenOn();
+    current_state = STATE_FOLLOW;
+}
+void Function::Obstacle_Found()
+{
+    Balanced.Stop();
+    rgb.blueOn();
+    current_state = STATE_RIGHT_TURN;
+    turn_start_time = millis();
+    dbg_state = 1; // hindernis
+}
+void Function::Enter_Search_Mode()
+{
+    rgb.redOn();
+    current_state = STATE_SEARCH;
 }
 
 void Ultrasonic::Check()

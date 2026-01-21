@@ -72,6 +72,17 @@ public:
   unsigned long follow_prev_time = 0;
   unsigned long search_start_time = 0;
   char search_direction = 0;  // 0=forward, 1=right, 2=left
+
+private:
+  void Function::Follow_Mode_Startup();
+  void Function::Follow_Mode_Follow();
+  void Function::Follow_Mode_Right_Turn();
+  void Function::Follow_Mode_Left_Turn();
+  void Function::Follow_Mode_Search();
+  void Function::Enter_Follow_Mode();
+  void Function::Obstacle_Found();
+  void Function::Enter_Search_Mode();
+
 };
 
 // === MOTION ENUM ===

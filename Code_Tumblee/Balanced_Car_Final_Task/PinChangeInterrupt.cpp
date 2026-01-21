@@ -1,7 +1,7 @@
 #include "Motor.h"
 #include "Follow1.h"
-#include "EnableInterrupt.h"
-#include "MsTimer2.h"
+#include "libraries/EnableInterrupt.h"
+#include "libraries/MsTimer2.h"
 #include "Balanced.h"
 
 static void EncoderCountRightA();

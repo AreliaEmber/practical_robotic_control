@@ -26,21 +26,21 @@ public:
 
   void blueOn()
   {
-    off()
+    off();
     fill(Color(0, 0, 255));
     show();
   }
 
   void redOn()
   {
-    off()
+    off();
     fill(Color(255, 0, 0));
     show();
   }
 
   void greenOn()
   {
-    off()
+    off();
     fill(Color(0, 255, 0));
     show();
   }
@@ -60,7 +60,3 @@ public:
 };
 
 extern RGB rgb;
-
-
-
-

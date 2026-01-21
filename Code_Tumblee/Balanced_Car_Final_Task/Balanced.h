@@ -1,8 +1,8 @@
 #ifndef _BALANCED_h
 #define _BALANCED_h
 
-#include "MsTimer2.h"
-#include "KalmanFilter.h"
+#include "libraries/MsTimer2.h"
+#include "libraries/KalmanFilter.h"
 
 enum MotionMode
 { 
@@ -102,4 +102,3 @@ class Mpu6050
 
 
 #endif
-

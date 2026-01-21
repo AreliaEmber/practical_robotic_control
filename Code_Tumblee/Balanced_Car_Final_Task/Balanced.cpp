@@ -1,8 +1,8 @@
 #include "Balanced.h"
 #include "Wire.h"
 #include "Motor.h"
-#include "MPU6050_6Axis_MotionApps20.h"
-#include "KalmanFilter.h"
+#include "libraries/MPU6050.h"
+#include "libraries/KalmanFilter.h"
 
 MPU6050 mpu;
 Mpu6050 Mpu6050;
@@ -217,4 +217,3 @@ void Balanced::CurveRight(int forwardSpeed, int turnSpeed)
   setting_car_speed = forwardSpeed;
   setting_turn_speed = -turnSpeed;
 }
-

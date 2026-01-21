@@ -76,6 +76,7 @@ public:
 private:
   void Function::Follow_Mode_Startup();
   void Function::Follow_Mode_Follow();
+  void Function::Follow_Mode_Obstacle();
   void Function::Follow_Mode_Right_Turn();
   void Function::Follow_Mode_Left_Turn();
   void Function::Follow_Mode_Search();

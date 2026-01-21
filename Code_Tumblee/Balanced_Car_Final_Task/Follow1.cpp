@@ -1,5 +1,8 @@
 #include "Follow1.h"
 #include "RGB.h"
+#include <queue>
+#include <functional>
+using namespace std;
 
 #ifndef SAFE_DISTANCE
 #define SAFE_DISTANCE  26.0
@@ -25,17 +28,49 @@ extern Balanced Balanced;
 enum RobotState {
     STATE_STARTUP,     // Initialisierungsphase
     STATE_FOLLOW,      // Normales Linienfolgen
-    STATE_OBSTACLE,    // Hindernis erkannt
-    STATE_RIGHT_TURN,     // Dreht sich 90 Grad
-    STATE_LEFT_TURN, 
+    STATE_OBSTACLE_FOUND,    // Hindernis erkannt
+    STATE_OBSTACLE_AVOID,     // Dreht sich 90 Grad
     STATE_SEARCH       // Sucht nach Linie
 };
 
 // === GLOBALE VARIABLEN ===
 RobotState current_state = STATE_STARTUP;
+bool obstacle_plan_step_finished = false;
 unsigned long turn_start_time = 0;
 unsigned long startup_start_time = 0;
 const unsigned long TURN_180_TIME = 11000;  // Zeit für 180° Drehung (in ms)
+const unsigned long FORWARD_5CM_TIME = 5000;  // Zeit für 5cm nach vorne (abgeschätzt erstmal, wird vmtl. etwas anpassung brauchen)
+queue<function<void()>> obstacle_handling_plan; // Erstmal hat das keinen Plan, aber alles gut, das geben wir dann später dazu
+
+
+// hier die lambda funktionen womit wir unsere plan liste befüllen
+auto right = []() {
+    Balanced.CurveRight(0, 30);  // Nach rechts drehen
+    
+    if (millis() - turn_start_time >= TURN_180_TIME/2) { // nun 90 grad drehung statt 180 grad
+        // Drehung abgeschlossen
+        Balanced.Stop();
+        obstacle_plan_step_finished = true;
+    }
+};
+auto left = []() {
+    Balanced.CurveLeft(0, 30);  // Nach links drehen
+    
+    if (millis() - turn_start_time >= TURN_180_TIME/2) { // nun 90 grad drehung statt 180 grad
+        // Drehung abgeschlossen
+        Balanced.Stop();
+        obstacle_plan_step_finished = true;
+    }
+};
+auto straight = []() {
+    Balanced.Forward(4);  // Langsam nach vorne
+    
+    if (millis() - turn_start_time >= FORWARD_5CM_TIME) { 
+        // Drehung abgeschlossen
+        Balanced.Stop();
+        obstacle_plan_step_finished = true;
+    }
+};
 
 // ---------- IRLine ----------
 void IRLine::Pin_init()
@@ -107,10 +142,10 @@ void Function::Follow_Mode1()
                 Follow_Mode_Follow()
                 break;
                 
-            case STATE_RIGHT_TURN:
-                Follow_Mode_Right_Turn()
+            case STATE_OBSTACLE_AVOID:
+                Follow_Mode_Obstacle()
                 break;
-                
+            
             case STATE_SEARCH:
                 Follow_Mode_Search()
                 break;
@@ -166,28 +201,41 @@ void Function::Follow_Mode_Follow()
         dbg_state = 5;
     }
 }
-void Function::Follow_Mode_Right_Turn()
+void Function::Follow_Mode_Obstacle()
 {
-    Balanced.CurveRight(0, 30);  // Nach rechts drehen
-    
-    if (millis() - turn_start_time >= TURN_180_TIME/2) { // nun 90 grad drehung statt 180 grad
-        // Drehung abgeschlossen
-        Balanced.Stop();
-        current_state = STATE_SEARCH;
+    if (obstacle_handling_plan.empty() == 1)
+    {
+        Enter_Search_Mode();
         dbg_state = 11;  // TURNING COMPLETE
+        return;
     }
-}
-void Function::Follow_Mode_Left_Turn()
-{
-    Balanced.CurveLeft(0, 30);  // Nach links drehen
+
+    obstacle_handling_plan.front()() // wir führen den aktuellen plan-schritt aus
+
+    if (obstacle_plan_step_finished == false) 
+    {
+        return;
+    }
+
+    obstacle_handling_plan.pop() // aktueller plan-schritt ist schon fertig, wir entfernen das vom queue
+    obstacle_plan_step_finished = false;
+
+    // entscheidungslogik um weitere pläne zu überlegen passt hier hin
+
+    // ende entscheidungslogik
     
-    if (millis() - turn_start_time >= TURN_180_TIME/2) { // nun 90 grad drehung statt 180 grad
-        // Drehung abgeschlossen
-        Balanced.Stop();
-        current_state = STATE_SEARCH;
-        dbg_state = 11;  // TURNING COMPLETE
-    }
+
+    // kurzer erklärung wie ich das mir aktuell vorstelle:
+    // wenn wir erstmal kein hindernis finden, dann gehen wir nach vorne einen schritt
+    // im zweiten durchgang würde man dann nach links drehen wenn kein hindernis da ist,
+    // dann können wir nämlich schon vorbeifahren.
+    // wenn da doch ein hindernis ist, dann drehen wir uns komplett um, gehen nach vorne
+    // auf die andere seite vom hindernis und wenn da dann kein hindernis ist, dann drehen
+    // wir uns wieder nach rechts and fahren direkt am hindernis vorbei
+
+    // d.h. nach jedem schritt kommen wir wieder hier an und prüfen wie wir weiterfahren sollten
 }
+
 void Function::Follow_Mode_Search()
 {
     // Nach Hindernis nach der Linie suchen
@@ -220,9 +268,13 @@ void Function::Obstacle_Found()
 {
     Balanced.Stop();
     rgb.blueOn();
-    current_state = STATE_RIGHT_TURN;
+    current_state = STATE_OBSTACLE_AVOID;
     turn_start_time = millis();
     dbg_state = 1; // hindernis
+    while (obstacle_handling_plan.empty() != 1) {
+        obstacle_handling_plan.pop(); // lösche alles was aktuell da drin ist
+    }
+    obstacle_handling_plan.push(right); //unser erster plan ist immer nach rechts zu drehen
 }
 void Function::Enter_Search_Mode()
 {

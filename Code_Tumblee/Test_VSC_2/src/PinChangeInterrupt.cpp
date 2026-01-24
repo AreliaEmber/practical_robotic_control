@@ -1,8 +1,8 @@
-#include "Motor.h"
+#include "actuators/Motor.h"
 #include "Follow1.h"
-#include "EnableInterrupt.h"
+#include "utils/EnableInterrupt.h"
 #include "MsTimer2.h"
-#include "Balanced.h"
+#include "actuators/Balanced.h"
 
 static void EncoderCountRightA();
 static void EncoderCountLeftA();

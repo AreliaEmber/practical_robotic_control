@@ -1,6 +1,6 @@
-#include "Balanced.h"
+#include "actuators/Balanced.h"
 #include "Wire.h"
-#include "Motor.h"
+#include "actuators/Motor.h"
 #include "MPU6050_6Axis_MotionApps20.h"
 #include "KalmanFilter.h"
 

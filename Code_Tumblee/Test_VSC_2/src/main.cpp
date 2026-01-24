@@ -12,7 +12,7 @@
 #include "actuators/Motor.h"
 #include "actuators/Balanced.h"
 #include "Follow1.h"
-#include "actuators/Rgb.h"
+#include "actuators/RGB.h"
 
 extern Timer2 Timer2;
 extern Mpu6050 Mpu6050;

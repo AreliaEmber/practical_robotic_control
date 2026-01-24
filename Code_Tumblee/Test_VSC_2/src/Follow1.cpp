@@ -1,6 +1,6 @@
 #include "Follow1.h"
-#include "RGB.h"
-#include "Motor.h"
+#include "actuators/RGB.h"
+#include "actuators/Motor.h"
 
 #ifndef SAFE_DISTANCE
 #define SAFE_DISTANCE  26.0
@@ -114,8 +114,8 @@ void Function::Follow_Mode1()
         follow_prev_time = millis();
         
         // === STATE MACHINE ===
-        switch(current_state) {
-            
+        switch (current_state) {
+
             case STATE_STARTUP:
                 // Initialisierungsphase beim Start
                 dbg_state = 100;  // STARTUP
@@ -126,7 +126,7 @@ void Function::Follow_Mode1()
                 has_seen_black = false;
                 follow_start_time = millis();  // Timer starten
                 break;
-            
+
             case STATE_FOLLOW:
                 // === BLACK-DETEKTION (IMMER ÜBERPRÜFEN - unabhängig von Verfolgung) ===
                 if (IR.IsBlackDetected()) {
@@ -134,76 +134,87 @@ void Function::Follow_Mode1()
                     has_seen_black = true;
                     line_lost_time = 0;
                     dbg_state = 88;  // BLACK DETECTED
-                } 
+                }
                 else if (has_seen_black && line_lost_time == 0) {
                     // BLACK war schon mal da, aber jetzt nicht mehr -> Timer starten
                     line_lost_time = millis();
                     dbg_state = 89;  // TIMER STARTED
                 }
-                
+
                 // Überprüfe ob 3.5 Sekunden ohne BLACK vergangen sind
-                if (has_seen_black && line_lost_time != 0 && 
+                if (has_seen_black && line_lost_time != 0 &&
                     millis() - line_lost_time >= LINE_LOST_TIME &&
                     millis() - follow_start_time >= MIN_FOLLOW_TIME) {
-                    // === LINIENENDE ERKANNT (mindestens 30 Sekunden vergangen) ===
+
+                    // === LINIENENDE ERKANNT ===
                     Balanced.Stop();
                     encoder_sum_at_line_lost = Motor::encoder_count_left_a + Motor::encoder_count_right_a;
                     current_state = STATE_FINAL_STRAIGHT;
                     dbg_state = 50;  // LINE END DETECTED
                     break;
                 }
-                
+
                 // === NORMALE VERFOLGUNGSLOGIK ===
                 if (!IR.IsOnLine()) {
                     // Nicht auf Linie - vorwärts suchen
                     dbg_state = 10;
                     Balanced.Forward(4);
-                } 
+                }
                 else {
                     // Auf Linie - folgen
                     bool L = IR.LeftOnLine();
                     bool R = IR.RightOnLine();
-                    
+
                     if (!L && !R) {
                         Balanced.Forward(4);
                         dbg_state = 2;
-                    } 
+                    }
                     else if (L && !R) {
                         Balanced.Right(12);
                         dbg_state = 3;
                         line_lost_time = 0;
-                    } 
+                    }
                     else if (!L && R) {
                         Balanced.Left(12);
                         dbg_state = 4;
                         line_lost_time = 0;
-                    } 
+                    }
                     else {
                         Balanced.Right(4);
                         dbg_state = 5;
                     }
                 }
                 break;
-                
-            case STATE_FINAL_STRAIGHT:
+
+            case STATE_LINE_LOST:
+                // Aktuell nicht verwendet: zurück in FOLLOW oder sicher stoppen
+                dbg_state = 90;   // LINE_LOST (unused)
+                Balanced.Stop();  // oder: Balanced.Forward(4); je nach gewünschter Strategie
+                current_state = STATE_FOLLOW;
+                break;
+
+            case STATE_FINAL_STRAIGHT: {
                 rgb.blueOn();
-                // Nach Linienende 25cm geradeaus fahren
+                // Nach Linienende geradeaus fahren
                 Balanced.Forward(4);
-                
+
                 // Encoder-Ticks seit Linienende zählen
-                unsigned long current_encoder_sum = Motor::encoder_count_left_a + Motor::encoder_count_right_a;
-                unsigned long encoder_ticks_traveled = current_encoder_sum - encoder_sum_at_line_lost;
-                
+                unsigned long current_encoder_sum =
+                    Motor::encoder_count_left_a + Motor::encoder_count_right_a;
+                unsigned long encoder_ticks_traveled =
+                    current_encoder_sum - encoder_sum_at_line_lost;
+
                 dbg_state = 51;  // FINAL STRAIGHT
-                
-                // Wenn 25cm gefahren: FERTIG
+
+                // Wenn Strecke gefahren: FERTIG
                 if (encoder_ticks_traveled >= final_distance_encoder_ticks) {
                     Balanced.Stop();
                     current_state = STATE_DONE;
                     dbg_state = 99;  // DONE
                 }
                 break;
-                
+            }
+
             case STATE_DONE:
                 // Fertig - Motor aus
                 Balanced.Stop();
@@ -211,6 +222,7 @@ void Function::Follow_Mode1()
                 dbg_state = 99;
                 break;
         }
+
     }
 }
 

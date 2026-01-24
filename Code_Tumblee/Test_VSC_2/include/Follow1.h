@@ -2,7 +2,7 @@
 #define _FOLLOW1_H_
 
 #include <Arduino.h>
-#include "Balanced.h"
+#include "actuators/Balanced.h"
 
 extern unsigned long encoder_sum_at_line_lost;
 extern unsigned long final_distance_encoder_ticks;

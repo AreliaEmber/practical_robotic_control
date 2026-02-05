@@ -57,11 +57,13 @@ unsigned long final_distance_encoder_ticks = (unsigned long)(FINAL_DISTANCE * EN
 unsigned long encoder_sum_at_line_lost = 0;
 bool has_seen_black = false;  // Flag: Hat schwarze Linie bereits gesehen?
 const unsigned long MIN_FOLLOW_TIME = 40000;  // Mindestens 40 Sekunden folgen
-const unsigned long TURN_180_TIME = 6000;  // Zeit für 180° Drehung (in ms)
-const unsigned long FORWARD_5CM_TIME = 2500;  // Zeit für 5cm nach vorne (abgeschätzt erstmal, wird vmtl. etwas anpassung brauchen)
+const unsigned long TURN_180_TIME = 6100;  // Zeit für 180° Drehung (in ms)
+const unsigned long FORWARD_5CM_TIME = 2000;  // Zeit für 5cm nach vorne (abgeschätzt erstmal, wird vmtl. etwas anpassung brauchen)
 const unsigned long FORWARD_SPEED = 12;
 const unsigned long RIGHT_SPEED = 36;
 const unsigned long LEFT_SPEED = 36;
+unsigned long LAST_OBSTACLE_FOUND = 0;
+const unsigned long OBSTACLE_TIMEOUT = 6000;
 
 // ---------- IRLine ----------
 void IRLine::Pin_init()
@@ -158,7 +160,7 @@ void Function::Follow_Mode_Startup()
 void Function::Follow_Mode_Follow()
 {
     // Normales Linienfolgen
-    if (Ultrasonic.distance_value < SAFE_DISTANCE) {
+    if (Ultrasonic.distance_value < SAFE_DISTANCE && millis() - OBSTACLE_TIMEOUT > LAST_OBSTACLE_FOUND) {
         // HINDERNIS ERKANNT
         Obstacle_Found();
         return;
@@ -196,27 +198,28 @@ void Function::Follow_Mode_Follow()
 }
 void Function::Follow_Mode_Obstacle()
 {  
-    switch (obstacle_handling_plan[current_obstacle_step]) {
-        case OBS_FORWARD:
-            Serial.println("forward");
-            break;
+    // switch (obstacle_handling_plan[current_obstacle_step]) {
+    //     case OBS_FORWARD:
+    //         Serial.println("forward");
+    //         break;
         
-        case OBS_LEFT:
-            Serial.println("left");
-            break;
+    //     case OBS_LEFT:
+    //         Serial.println("left");
+    //         break;
             
-        case OBS_RIGHT:
-            Serial.println("right");
-            break;
+    //     case OBS_RIGHT:
+    //         Serial.println("right");
+    //         break;
         
-        case OBS_NONE:
-            Serial.println("none");
-            break;
-    }
+    //     case OBS_NONE:
+    //         Serial.println("none");
+    //         break;
+    // }
 
     if (obstacle_handling_plan[current_obstacle_step] == OBS_NONE)
     {
         Enter_Search_Mode();
+        LAST_OBSTACLE_FOUND = millis();
         dbg_state = 11;  // TURNING COMPLETE
         return;
     }
@@ -260,9 +263,9 @@ void Function::Follow_Mode_Obstacle()
             obstacle_handling_plan[current_obstacle_step + 2] = OBS_FORWARD;
             obstacle_handling_plan[current_obstacle_step + 3] = OBS_FORWARD;
             obstacle_handling_plan[current_obstacle_step + 4] = OBS_FORWARD;
-            obstacle_handling_plan[current_obstacle_step + 5] = OBS_RIGHT;
-            obstacle_handling_plan[current_obstacle_step + 6] = OBS_FORWARD;
-            obstacle_handling_plan[current_obstacle_step + 7] = OBS_LEFT;
+            obstacle_handling_plan[current_obstacle_step + 5] = OBS_HALF_RIGHT;
+            //obstacle_handling_plan[current_obstacle_step + 6] = OBS_FORWARD;
+            //obstacle_handling_plan[current_obstacle_step + 7] = OBS_LEFT;
         }
         else if (Ultrasonic.distance_value < SAFE_DISTANCE) // es gibt auch hier ein hindernis
         {   
@@ -270,15 +273,16 @@ void Function::Follow_Mode_Obstacle()
             
             if (obstacle_handling_plan[current_obstacle_step - 2] == OBS_FORWARD) {
                 obstacle_handling_plan[current_obstacle_step] = OBS_LEFT; 
-                obstacle_handling_plan[current_obstacle_step + 1] = OBS_FORWARD;
-                obstacle_handling_plan[current_obstacle_step + 2] = OBS_FORWARD;
+                //obstacle_handling_plan[current_obstacle_step + 1] = OBS_HALF_LEFT;
+                obstacle_handling_plan[current_obstacle_step + 1] = OBS_LONG_FORWARD;
+                obstacle_handling_plan[current_obstacle_step + 2] = OBS_LONG_FORWARD;
                 obstacle_handling_plan[current_obstacle_step + 3] = OBS_RIGHT;
                 obstacle_handling_plan[current_obstacle_step + 4] = OBS_FORWARD;
                 obstacle_handling_plan[current_obstacle_step + 5] = OBS_FORWARD;
                 obstacle_handling_plan[current_obstacle_step + 6] = OBS_FORWARD;
-                obstacle_handling_plan[current_obstacle_step + 7] = OBS_RIGHT;
-                obstacle_handling_plan[current_obstacle_step + 8] = OBS_FORWARD;
-                obstacle_handling_plan[current_obstacle_step + 9] = OBS_LEFT;
+                obstacle_handling_plan[current_obstacle_step + 7] = OBS_HALF_RIGHT;
+                //obstacle_handling_plan[current_obstacle_step + 8] = OBS_FORWARD;
+                //obstacle_handling_plan[current_obstacle_step + 9] = OBS_LEFT;
             }
             
         }
@@ -287,9 +291,9 @@ void Function::Follow_Mode_Obstacle()
             obstacle_handling_plan[current_obstacle_step] = OBS_FORWARD;
             obstacle_handling_plan[current_obstacle_step + 1] = OBS_FORWARD;
             obstacle_handling_plan[current_obstacle_step + 2] = OBS_FORWARD;
-            obstacle_handling_plan[current_obstacle_step + 3] = OBS_LEFT;
-            obstacle_handling_plan[current_obstacle_step + 4] = OBS_FORWARD;
-            obstacle_handling_plan[current_obstacle_step + 5] = OBS_RIGHT;
+            obstacle_handling_plan[current_obstacle_step + 3] = OBS_HALF_LEFT;
+            //obstacle_handling_plan[current_obstacle_step + 4] = OBS_FORWARD;
+            //obstacle_handling_plan[current_obstacle_step + 5] = OBS_RIGHT;
         }
     }
     else
@@ -301,7 +305,7 @@ void Function::Follow_Mode_Obstacle()
 void Function::Follow_Mode_Search()
 {
     // Nach Hindernis nach der Linie suchen
-    if (Ultrasonic.distance_value < SAFE_DISTANCE) {
+    if (Ultrasonic.distance_value < SAFE_DISTANCE && millis() - OBSTACLE_TIMEOUT > LAST_OBSTACLE_FOUND) {
         // Immer noch Hindernis da - nochmal drehen
         Obstacle_Found();
     } 
@@ -369,11 +373,41 @@ void Function::left()
         obstacle_plan_step_finished = true;
     }
 };
+void Function::half_right() 
+{
+    Balanced.Right(RIGHT_SPEED);  // Nach rechts drehen
+    
+    if (millis() - turn_start_time >= TURN_180_TIME/5) { // nun 45 grad drehung statt 180 grad
+        // Drehung abgeschlossen
+        Balanced.Stop();
+        obstacle_plan_step_finished = true;
+    }
+};
+void Function::half_left() 
+{
+    Balanced.Left(LEFT_SPEED);  // Nach links drehen
+    
+    if (millis() - turn_start_time >= TURN_180_TIME/5) { // nun 45 grad drehung statt 180 grad
+        // Drehung abgeschlossen
+        Balanced.Stop();
+        obstacle_plan_step_finished = true;
+    }
+};
 void Function::straight() 
 {
     Balanced.Forward(FORWARD_SPEED);  // Langsam nach vorne
     
     if (millis() - turn_start_time >= FORWARD_5CM_TIME) { 
+        // Drehung abgeschlossen
+        Balanced.Stop();
+        obstacle_plan_step_finished = true;
+    }
+};
+void Function::long_straight() 
+{
+    Balanced.Forward(FORWARD_SPEED);  // Langsam nach vorne
+    
+    if (millis() - turn_start_time >= FORWARD_5CM_TIME*1.2) { 
         // Drehung abgeschlossen
         Balanced.Stop();
         obstacle_plan_step_finished = true;
@@ -398,7 +432,18 @@ void Function::Execute_Obstacle_Step(ObstacleState plan_step) // this only exist
         
         case OBS_NONE:
             break;
+        
+        case OBS_HALF_LEFT:
+            half_left();
+            break;
+
+        case OBS_HALF_RIGHT:
+            half_right();
+            break;
     
+        case OBS_LONG_FORWARD:
+            long_straight();
+            break;
     }
 }
 

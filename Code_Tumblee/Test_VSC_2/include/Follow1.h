@@ -11,7 +11,10 @@ enum ObstacleState {
     OBS_FORWARD, // nach vorne
     OBS_RIGHT, // nach rechts
     OBS_LEFT, // nach links
-    OBS_NONE // kein Plan
+    OBS_NONE, // kein Plan
+    OBS_HALF_RIGHT, // halb nach rechts
+    OBS_HALF_LEFT, // halb nach links
+    OBS_LONG_FORWARD // weeeiiiiit nach vorne
 };
 
 // === ULTRASONIC SENSOR KLASSE ===
@@ -111,6 +114,9 @@ private:
   void straight();
   void left();
   void right();
+  void half_left();
+  void half_right();
+  void long_straight();
 };
 
 // === MOTION ENUM ===

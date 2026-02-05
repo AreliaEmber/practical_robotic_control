@@ -28,6 +28,18 @@ public:
     show();
   }
 
+  void greenOn()
+  {
+    fill(Color(0, 255, 0));
+    show();
+  }
+
+  void redOn()
+  {
+    fill(Color(255, 0, 0));
+    show();
+  }
+
   void off()
   {
     clear();

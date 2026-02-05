@@ -7,6 +7,13 @@
 extern unsigned long encoder_sum_at_line_lost;
 extern unsigned long final_distance_encoder_ticks;
 
+enum ObstacleState {
+    OBS_FORWARD, // nach vorne
+    OBS_RIGHT, // nach rechts
+    OBS_LEFT, // nach links
+    OBS_NONE // kein Plan
+};
+
 // === ULTRASONIC SENSOR KLASSE ===
 class Ultrasonic 
 {
@@ -78,6 +85,7 @@ class Function
 public:
   void Follow_Mode1();
   
+  
   // Debug-Variablen (NUR EINMAL!)
   volatile int dbg_l = 0;
   volatile int dbg_r = 0;
@@ -90,6 +98,19 @@ public:
   unsigned long follow_prev_time = 0;
   unsigned long search_start_time = 0;
   char search_direction = 0;  // 0=forward, 1=right, 2=left
+
+private:
+  void Follow_Mode_Startup();
+  void Follow_Mode_Follow();
+  void Follow_Mode_Obstacle();
+  void Follow_Mode_Search();
+  void Enter_Follow_Mode();
+  void Obstacle_Found();
+  void Enter_Search_Mode();
+  void Execute_Obstacle_Step(ObstacleState plan_step);
+  void straight();
+  void left();
+  void right();
 };
 
 // === MOTION ENUM ===

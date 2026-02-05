@@ -41,7 +41,7 @@ static void Timer2::interrupt()
 Balanced::Balanced()
 {
   //kp_balance = 55, kd_balance = 0.75;     // Original
-  kp_balance = 55, kd_balance = 0.75;
+  kp_balance = 55, kd_balance = 0.05;
   //kp_speed = 10, ki_speed = 0.26;         // Original
   kp_speed = 10, ki_speed = 0.26;
   //kp_turn = 2.5, kd_turn = 0.5;           // Original

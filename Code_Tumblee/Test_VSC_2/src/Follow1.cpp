@@ -2,6 +2,8 @@
 #include "actuators/RGB.h"
 #include "actuators/Motor.h"
 
+using namespace std;
+
 #ifndef SAFE_DISTANCE
 #define SAFE_DISTANCE  26.0
 #endif
@@ -10,11 +12,11 @@
 #endif
 
 // === SENSOR-SCHWELLWERTE ===
-#define IR_WHITE_MIN      0      // Weiß: 0-100
-#define IR_WHITE_MAX      100
-#define IR_GRAY_MIN       100    // Grau (Sensor teilweise auf Linie): 100-300
-#define IR_GRAY_MAX       300
-#define IR_BLACK_MIN      300    // Schwarz: >300
+#define IR_WHITE_MIN      0      // Weiß: 0-100  // hab ich geändert, da der winkel von den sensoren nun anders ist
+#define IR_WHITE_MAX      700
+#define IR_GRAY_MIN       700    // Grau (Sensor teilweise auf Linie): 100-300
+#define IR_GRAY_MAX       800
+#define IR_BLACK_MIN      800    // Schwarz: >300
 
 // === LINIENENDEDETEKTIERUNG ===
 #define LINE_LOST_TIME    6500   // 3,5 Sekunden kein BLACK erkannt = Linienende
@@ -29,15 +31,24 @@ IRLine IR;
 extern Balanced Balanced;
 
 enum RobotState {
-    STATE_STARTUP,          // Initialisierungsphase
-    STATE_FOLLOW,           // Normales Linienfolgen
-    STATE_LINE_LOST,        // Linie verloren erkannt
-    STATE_FINAL_STRAIGHT,   // Nach Linienende 25cm geradeaus fahren
-    STATE_DONE              // Fertig
+    STATE_STARTUP,     // Initialisierungsphase
+    STATE_FOLLOW,      // Normales Linienfolgen
+    STATE_OBSTACLE_FOUND,    // Hindernis erkannt
+    STATE_OBSTACLE_AVOID,     // Dreht sich 90 Grad
+    STATE_SEARCH       // Sucht nach Linie
 };
 
 // === GLOBALE VARIABLEN ===
 RobotState current_state = STATE_STARTUP;
+ObstacleState obstacle_handling_plan[16] = {
+    OBS_NONE, OBS_NONE, OBS_NONE, OBS_NONE,
+    OBS_NONE, OBS_NONE, OBS_NONE, OBS_NONE,
+    OBS_NONE, OBS_NONE, OBS_NONE, OBS_NONE,
+    OBS_NONE, OBS_NONE, OBS_NONE, OBS_NONE
+};
+unsigned long current_obstacle_step = 0;
+bool obstacle_plan_step_finished = false;
+unsigned long turn_start_time = 0;
 unsigned long startup_start_time = 0;
 unsigned long line_lost_time = 0;
 unsigned long follow_start_time = 0;  // Zeit seit Start des FOLLOW-Modus
@@ -46,6 +57,11 @@ unsigned long final_distance_encoder_ticks = (unsigned long)(FINAL_DISTANCE * EN
 unsigned long encoder_sum_at_line_lost = 0;
 bool has_seen_black = false;  // Flag: Hat schwarze Linie bereits gesehen?
 const unsigned long MIN_FOLLOW_TIME = 40000;  // Mindestens 40 Sekunden folgen
+const unsigned long TURN_180_TIME = 6000;  // Zeit für 180° Drehung (in ms)
+const unsigned long FORWARD_5CM_TIME = 3000;  // Zeit für 5cm nach vorne (abgeschätzt erstmal, wird vmtl. etwas anpassung brauchen)
+const unsigned long FORWARD_SPEED = 12;
+const unsigned long RIGHT_SPEED = 36;
+const unsigned long LEFT_SPEED = 36;
 
 // ---------- IRLine ----------
 void IRLine::Pin_init()
@@ -73,11 +89,6 @@ bool IRLine::IsFullyOnLine()
   return (left_raw > IR_BLACK_MIN) && (right_raw > IR_BLACK_MIN);
 }
 
-bool IRLine::IsBlackDetected()
-{
-  return (left_raw > IR_BLACK_MIN) || (right_raw > IR_BLACK_MIN);
-}
-
 // ---------- Ultrasonic ----------
 void Ultrasonic::Pin_init()
 {
@@ -93,8 +104,6 @@ volatile double Ultrasonic::distance_value = 0.0;
 // ---------- FOLLOW MODE 1 ----------
 void Function::Follow_Mode1()
 {
-
-    IR.Send();
     Ultrasonic.Get_Distance();
     IR.Read();
     
@@ -114,115 +123,278 @@ void Function::Follow_Mode1()
         follow_prev_time = millis();
         
         // === STATE MACHINE ===
-        switch (current_state) {
-
+        switch(current_state) {
+            
             case STATE_STARTUP:
-                // Initialisierungsphase beim Start
-                dbg_state = 100;  // STARTUP
-                Balanced.Stop();
-                delay(2000);
-                current_state = STATE_FOLLOW;
-                line_lost_time = 0;
-                has_seen_black = false;
-                follow_start_time = millis();  // Timer starten
+                Follow_Mode_Startup();
                 break;
-
+            
             case STATE_FOLLOW:
-                // === BLACK-DETEKTION (IMMER ÜBERPRÜFEN - unabhängig von Verfolgung) ===
-                if (IR.IsBlackDetected()) {
-                    // BLACK erkannt: Flag setzen und Timer zurücksetzen
-                    has_seen_black = true;
-                    line_lost_time = 0;
-                    dbg_state = 88;  // BLACK DETECTED
-                }
-                else if (has_seen_black && line_lost_time == 0) {
-                    // BLACK war schon mal da, aber jetzt nicht mehr -> Timer starten
-                    line_lost_time = millis();
-                    dbg_state = 89;  // TIMER STARTED
-                }
-
-                // Überprüfe ob 3.5 Sekunden ohne BLACK vergangen sind
-                if (has_seen_black && line_lost_time != 0 &&
-                    millis() - line_lost_time >= LINE_LOST_TIME &&
-                    millis() - follow_start_time >= MIN_FOLLOW_TIME) {
-
-                    // === LINIENENDE ERKANNT ===
-                    Balanced.Stop();
-                    encoder_sum_at_line_lost = Motor::encoder_count_left_a + Motor::encoder_count_right_a;
-                    current_state = STATE_FINAL_STRAIGHT;
-                    dbg_state = 50;  // LINE END DETECTED
-                    break;
-                }
-
-                // === NORMALE VERFOLGUNGSLOGIK ===
-                if (!IR.IsOnLine()) {
-                    // Nicht auf Linie - vorwärts suchen
-                    dbg_state = 10;
-                    Balanced.Forward(4);
-                }
-                else {
-                    // Auf Linie - folgen
-                    bool L = IR.LeftOnLine();
-                    bool R = IR.RightOnLine();
-
-                    if (!L && !R) {
-                        Balanced.Forward(4);
-                        dbg_state = 2;
-                    }
-                    else if (L && !R) {
-                        Balanced.Right(12);
-                        dbg_state = 3;
-                        line_lost_time = 0;
-                    }
-                    else if (!L && R) {
-                        Balanced.Left(12);
-                        dbg_state = 4;
-                        line_lost_time = 0;
-                    }
-                    else {
-                        Balanced.Right(4);
-                        dbg_state = 5;
-                    }
-                }
+                Follow_Mode_Follow();
                 break;
-
-            case STATE_LINE_LOST:
-                // Aktuell nicht verwendet: zurück in FOLLOW oder sicher stoppen
-                dbg_state = 90;   // LINE_LOST (unused)
-                Balanced.Stop();  // oder: Balanced.Forward(4); je nach gewünschter Strategie
-                current_state = STATE_FOLLOW;
+                
+            case STATE_OBSTACLE_AVOID:
+                Follow_Mode_Obstacle();
                 break;
-
-            case STATE_FINAL_STRAIGHT: {
-                rgb.blueOn();
-                // Nach Linienende geradeaus fahren
-                Balanced.Forward(4);
-
-                // Encoder-Ticks seit Linienende zählen
-                unsigned long current_encoder_sum =
-                    Motor::encoder_count_left_a + Motor::encoder_count_right_a;
-                unsigned long encoder_ticks_traveled =
-                    current_encoder_sum - encoder_sum_at_line_lost;
-
-                dbg_state = 51;  // FINAL STRAIGHT
-
-                // Wenn Strecke gefahren: FERTIG
-                if (encoder_ticks_traveled >= final_distance_encoder_ticks) {
-                    Balanced.Stop();
-                    current_state = STATE_DONE;
-                    dbg_state = 99;  // DONE
-                }
+            
+            case STATE_SEARCH:
+                Follow_Mode_Search();
                 break;
-            }
-
-            case STATE_DONE:
-                // Fertig - Motor aus
-                Balanced.Stop();
-                has_seen_black = true;  // Sperren
-                dbg_state = 99;
+            case STATE_OBSTACLE_FOUND:
                 break;
         }
+    }
+}
 
+void Function::Follow_Mode_Startup()
+{
+    // Initialisierungsphase beim Start
+    dbg_state = 100;  // STARTUP SUCCESS
+    Balanced.Stop();
+    delay(2000);
+    Enter_Follow_Mode();
+}
+
+void Function::Follow_Mode_Follow()
+{
+    // Normales Linienfolgen
+    if (Ultrasonic.distance_value < SAFE_DISTANCE) {
+        // HINDERNIS ERKANNT
+        Obstacle_Found();
+        return;
+    } 
+    if (!IR.IsOnLine()) {
+        // nicht auf Linie, Suchmodus
+        dbg_state = 10;  // SEARCH
+        Balanced.Forward(FORWARD_SPEED);  // Sehr langsam vorwärts
+        return;
+    } 
+    // LINIE GEFUNDEN: TRACKING
+    bool L = IR.LeftOnLine();
+    bool R = IR.RightOnLine();
+    
+    if (L && R) {
+        // Beide perfekt neben der Linie: Geradeaus
+        Balanced.Forward(FORWARD_SPEED);
+        dbg_state = 2;
+    } 
+    else if (!L && R) {
+        // Nur links: Rechts korrigieren
+        Balanced.Right(RIGHT_SPEED);
+        dbg_state = 3;
+    } 
+    else if (L && !R) {
+        // Nur rechts: Links korrigieren
+        Balanced.Left(LEFT_SPEED);
+        dbg_state = 4;
+    } 
+    else {
+        // Beide auf Linie: Nach rechts korrigieren
+        Balanced.Right(4);
+        dbg_state = 5;
+    }
+}
+void Function::Follow_Mode_Obstacle()
+{  
+    switch (obstacle_handling_plan[current_obstacle_step]) {
+        case OBS_FORWARD:
+            Serial.println("forward");
+            break;
+        
+        case OBS_LEFT:
+            Serial.println("left");
+            break;
+            
+        case OBS_RIGHT:
+            Serial.println("right");
+            break;
+        
+        case OBS_NONE:
+            Serial.println("none");
+            break;
+    }
+
+    if (obstacle_handling_plan[current_obstacle_step] == OBS_NONE)
+    {
+        Enter_Search_Mode();
+        dbg_state = 11;  // TURNING COMPLETE
+        return;
+    }
+
+    Execute_Obstacle_Step(obstacle_handling_plan[current_obstacle_step]); // wir führen den aktuellen plan-schritt aus
+
+    if (obstacle_plan_step_finished == false) // müssen weiter das gleiche ausführen
+    {
+        return;
+    }
+
+    current_obstacle_step++; // aktueller plan-schritt ist schon fertig, wir iterieren
+    turn_start_time = millis();
+    obstacle_plan_step_finished = false;
+
+    if (obstacle_handling_plan[current_obstacle_step] != OBS_NONE) // es gibt noch weitere pläne die wir ausführen können
+    {
+        return;
+    }
+
+    // entscheidungslogik aktuell einfach gehardcodet. why not
+
+    if (current_obstacle_step == 1) // hardcoden von der zeit her weil das einfacher geht
+    {
+        if (Ultrasonic.distance_value < SAFE_DISTANCE) // es gibt auch hier ein hindernis
+        {
+            obstacle_handling_plan[current_obstacle_step] = OBS_LEFT;
+            obstacle_handling_plan[current_obstacle_step + 1] = OBS_LEFT;
+        }
+        else // wir können weiterfahren
+        {
+            obstacle_handling_plan[current_obstacle_step] = OBS_FORWARD;
+            obstacle_handling_plan[current_obstacle_step + 1] = OBS_LEFT;
+        }
+    }
+    else if (current_obstacle_step == 2 || current_obstacle_step == 3)
+    {
+        if (Ultrasonic.distance_value < SAFE_DISTANCE) // es gibt auch hier ein hindernis
+        {   
+            // sehr viele annahmen über den Form des Obstacles wurden hier getroffen
+            if (obstacle_handling_plan[current_obstacle_step - 2] == OBS_LEFT) {
+                obstacle_handling_plan[current_obstacle_step] = OBS_FORWARD;
+                obstacle_handling_plan[current_obstacle_step + 1] = OBS_RIGHT;
+                obstacle_handling_plan[current_obstacle_step + 2] = OBS_FORWARD;
+                obstacle_handling_plan[current_obstacle_step + 3] = OBS_FORWARD;
+                obstacle_handling_plan[current_obstacle_step + 4] = OBS_RIGHT;
+                obstacle_handling_plan[current_obstacle_step + 5] = OBS_FORWARD;
+                obstacle_handling_plan[current_obstacle_step + 6] = OBS_LEFT;
+            }
+            else if (obstacle_handling_plan[current_obstacle_step - 2] == OBS_FORWARD) {
+                obstacle_handling_plan[current_obstacle_step] = OBS_LEFT; 
+                obstacle_handling_plan[current_obstacle_step + 1] = OBS_FORWARD;
+                obstacle_handling_plan[current_obstacle_step + 2] = OBS_FORWARD;
+                obstacle_handling_plan[current_obstacle_step + 3] = OBS_RIGHT;
+                obstacle_handling_plan[current_obstacle_step + 4] = OBS_FORWARD;
+                obstacle_handling_plan[current_obstacle_step + 5] = OBS_FORWARD;
+                obstacle_handling_plan[current_obstacle_step + 6] = OBS_RIGHT;
+                obstacle_handling_plan[current_obstacle_step + 7] = OBS_FORWARD;
+                obstacle_handling_plan[current_obstacle_step + 8] = OBS_LEFT;
+            }
+            
+        }
+        else // wir können weiterfahren
+        {
+            obstacle_handling_plan[current_obstacle_step] = OBS_FORWARD;
+            obstacle_handling_plan[current_obstacle_step + 1] = OBS_FORWARD;
+            obstacle_handling_plan[current_obstacle_step + 2] = OBS_LEFT;
+            obstacle_handling_plan[current_obstacle_step + 3] = OBS_FORWARD;
+            obstacle_handling_plan[current_obstacle_step + 4] = OBS_RIGHT;
+        }
+    }
+    else
+    {
+        return;
+    }
+}
+
+void Function::Follow_Mode_Search()
+{
+    // Nach Hindernis nach der Linie suchen
+    if (Ultrasonic.distance_value < SAFE_DISTANCE) {
+        // Immer noch Hindernis da - nochmal drehen
+        Obstacle_Found();
+    } 
+    else if (IR.IsOnLine()) {
+        // Linie gefunden - zurück zum normalen Folgen
+        Enter_Follow_Mode();
+        dbg_state = 20;  // LINE FOUND - RESUME FOLLOW
+    } 
+    else {
+        // Noch keine Linie - weiter suchen
+        Balanced.Forward(FORWARD_SPEED);  // Langsam vorwärts
+        dbg_state = 12;  // SEARCHING
+    }
+}
+// void Function::Follow_Mode_Etc()
+// {
+
+// }
+
+void Function::Enter_Follow_Mode()
+{
+    rgb.greenOn();
+    current_state = STATE_FOLLOW;
+}
+void Function::Obstacle_Found()
+{
+    Balanced.Stop();
+    rgb.blueOn();
+    current_state = STATE_OBSTACLE_AVOID;
+    turn_start_time = millis();
+    dbg_state = 1; // hindernis
+    unsigned int i = 0;
+    while (i < 16) { // size of the obstacle handling plan
+        obstacle_handling_plan[i] = OBS_NONE; // lösche alles was aktuell da drin ist
+        //Serial.println("hello");
+        i++;
+    }
+    obstacle_handling_plan[0] = OBS_RIGHT; //unser erster plan ist immer nach rechts zu drehen
+    current_obstacle_step = 0;
+}
+void Function::Enter_Search_Mode()
+{
+    rgb.redOn();
+    current_state = STATE_SEARCH;
+}
+
+// hier die lambda funktionen womit wir unsere plan liste befüllen
+void Function::right() 
+{
+    Balanced.Right(RIGHT_SPEED);  // Nach rechts drehen
+    
+    if (millis() - turn_start_time >= TURN_180_TIME/2) { // nun 90 grad drehung statt 180 grad
+        // Drehung abgeschlossen
+        Balanced.Stop();
+        obstacle_plan_step_finished = true;
+    }
+};
+void Function::left() 
+{
+    Balanced.Left(LEFT_SPEED);  // Nach links drehen
+    
+    if (millis() - turn_start_time >= TURN_180_TIME/2) { // nun 90 grad drehung statt 180 grad
+        // Drehung abgeschlossen
+        Balanced.Stop();
+        obstacle_plan_step_finished = true;
+    }
+};
+void Function::straight() 
+{
+    Balanced.Forward(FORWARD_SPEED);  // Langsam nach vorne
+    
+    if (millis() - turn_start_time >= FORWARD_5CM_TIME) { 
+        // Drehung abgeschlossen
+        Balanced.Stop();
+        obstacle_plan_step_finished = true;
+    }
+};
+
+void Function::Execute_Obstacle_Step(ObstacleState plan_step) // this only exists because I couldn't get the libraries to work ;-;
+{
+    switch(plan_step) {
+            
+        case OBS_FORWARD:
+            straight();
+            break;
+        
+        case OBS_LEFT:
+            left();
+            break;
+            
+        case OBS_RIGHT:
+            right();
+            break;
+        
+        case OBS_NONE:
+            break;
+    
     }
 }
 

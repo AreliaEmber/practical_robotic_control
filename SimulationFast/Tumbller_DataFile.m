@@ -428,17 +428,18 @@ smiData.RigidTransform(58).ID = "F[MyTlWXuhsDfq6OZmW:-:MqwbMUvw+UAzAxcIl]";
 %Center of Mass (CoM) %Moments of Inertia (MoI) %Product of Inertia (PoI)
 
 %Initialize the Solid structure array by filling in null values.
-smiData.Solid(12).mass = 1.0;
-smiData.Solid(12).CoM = [0.0 0.0 0.0];
-smiData.Solid(12).MoI = [0.0 0.0 0.0];
-smiData.Solid(12).PoI = [0.0 0.0 0.0];
-smiData.Solid(12).color = [0.0 0.0 0.0];
-smiData.Solid(12).opacity = 0.0;
-smiData.Solid(12).ID = "";
+%Middle Plate
+%smiData.Solid(12).mass = 1.0;
+%smiData.Solid(12).CoM = [0.0 0.0 0.0];
+%smiData.Solid(12).MoI = [0.0 0.0 0.0];
+%smiData.Solid(12).PoI = [0.0 0.0 0.0];
+%smiData.Solid(12).color = [0.0 0.0 0.0];
+%smiData.Solid(12).opacity = 0.0;
+%smiData.Solid(12).ID = "";
 
-%Inertia Type - Custom
-%Visual Properties - Simple
-smiData.Solid(1).mass = 0.032719167;  % kg
+%Chassis Plate
+%Visual Properties - Simple Middle Plate
+smiData.Solid(1).mass = 0.06;  % kg
 smiData.Solid(1).CoM = [6.2019019999999996 -175.39327299999999 1.5];  % mm
 smiData.Solid(1).MoI = [18.780000000000001 38.825000000000003 57.556000000000004];  % kg*mm^2
 smiData.Solid(1).PoI = [0 0 -0.0050000000000000001];  % kg*mm^2
@@ -446,9 +447,9 @@ smiData.Solid(1).color = [0.647058824 0.647058824 0.647058824];
 smiData.Solid(1).opacity = 0.349019608;
 smiData.Solid(1).ID = "RDCD*:*797da2dcc90f5064dcd69baf";
 
-%Inertia Type - Custom
-%Visual Properties - Simple
-smiData.Solid(2).mass = 1;  % kg
+%Engine
+%Visual Properties - Simple Engine
+smiData.Solid(2).mass = 0.09;  % kg
 smiData.Solid(2).CoM = [0 0 0];  % mm
 smiData.Solid(2).MoI = [0 0 0];  % kg*mm^2
 smiData.Solid(2).PoI = [0 0 0];  % kg*mm^2
@@ -456,9 +457,9 @@ smiData.Solid(2).color = [0.647058824 0.647058824 0.647058824];
 smiData.Solid(2).opacity = 1.000000000;
 smiData.Solid(2).ID = "JOD*:*017ae92e7960008552915205";
 
-%Inertia Type - Custom
-%Visual Properties - Simple
-smiData.Solid(3).mass = 1;  % kg
+%Copper Column
+%Visual Properties - Simple copper Column
+smiData.Solid(3).mass = 0.008;  % kg
 smiData.Solid(3).CoM = [0 0 0];  % mm
 smiData.Solid(3).MoI = [0 0 0];  % kg*mm^2
 smiData.Solid(3).PoI = [0 0 0];  % kg*mm^2
@@ -466,9 +467,9 @@ smiData.Solid(3).color = [0.952941176 0.631372549 0.219607843];
 smiData.Solid(3).opacity = 1.000000000;
 smiData.Solid(3).ID = "JFD*:*8755a7546b559bc1b791d817";
 
-%Inertia Type - Custom
+%Expansion Board
 %Visual Properties - Simple
-smiData.Solid(4).mass = 1;  % kg
+smiData.Solid(4).mass = 0.250;  % kg
 smiData.Solid(4).CoM = [0 0 0];  % mm
 smiData.Solid(4).MoI = [0 0 0];  % kg*mm^2
 smiData.Solid(4).PoI = [0 0 0];  % kg*mm^2
@@ -476,9 +477,9 @@ smiData.Solid(4).color = [0.231372549 0.380392157 0.705882353];
 smiData.Solid(4).opacity = 1.000000000;
 smiData.Solid(4).ID = "JHD*:*5c86d1c3299141bced3bf2c4";
 
-%Inertia Type - Custom
+%Copper Column
 %Visual Properties - Simple
-smiData.Solid(5).mass = 1;  % kg
+smiData.Solid(5).mass = 0.006;  % kg
 smiData.Solid(5).CoM = [0 0 0];  % mm
 smiData.Solid(5).MoI = [0 0 0];  % kg*mm^2
 smiData.Solid(5).PoI = [0 0 0];  % kg*mm^2
@@ -486,9 +487,9 @@ smiData.Solid(5).color = [0.952941176 0.631372549 0.219607843];
 smiData.Solid(5).opacity = 1.000000000;
 smiData.Solid(5).ID = "JFD*:*659da5d64f4ec107c0ef89cd";
 
-%Inertia Type - Custom
+%Engine Mount
 %Visual Properties - Simple
-smiData.Solid(6).mass = 1;  % kg
+smiData.Solid(6).mass = 0.07;  % kg
 smiData.Solid(6).CoM = [0 0 0];  % mm
 smiData.Solid(6).MoI = [0 0 0];  % kg*mm^2
 smiData.Solid(6).PoI = [0 0 0];  % kg*mm^2
@@ -496,9 +497,9 @@ smiData.Solid(6).color = [0.000000000 0.000000000 0.000000000];
 smiData.Solid(6).opacity = 1.000000000;
 smiData.Solid(6).ID = "JLD*:*017ae92e7960008552915205";
 
-%Inertia Type - Custom
+%Copper Column
 %Visual Properties - Simple
-smiData.Solid(7).mass = 1.0034256048400000002;  % kg
+smiData.Solid(7).mass = 0.006;  % kg
 smiData.Solid(7).CoM = [0.39261999999999997 0.00041399999999999998 6.7000000000000002e-05];  % mm
 smiData.Solid(7).MoI = [0.010999999999999999 0.16200000000000001 0.16200000000000001];  % kg*mm^2
 smiData.Solid(7).PoI = [0 -0 0];  % kg*mm^2
@@ -506,9 +507,9 @@ smiData.Solid(7).color = [0.952941176 0.631372549 0.219607843];
 smiData.Solid(7).opacity = 1.000000000;
 smiData.Solid(7).ID = "JFD*:*204ce1af3c215416c7af658b";
 
-%Inertia Type - Custom
+%Battery
 %Visual Properties - Simple
-smiData.Solid(8).mass = 1;  % kg
+smiData.Solid(8).mass = 0.35;  % kg
 smiData.Solid(8).CoM = [0 0 0];  % mm
 smiData.Solid(8).MoI = [0 0 0];  % kg*mm^2
 smiData.Solid(8).PoI = [0 0 0];  % kg*mm^2
@@ -516,9 +517,9 @@ smiData.Solid(8).color = [0.000000000 0.000000000 0.000000000];
 smiData.Solid(8).opacity = 1.000000000;
 smiData.Solid(8).ID = "JHD*:*a8348482368e5e07893e51e0";
 
-%Inertia Type - Custom
+%Foothold
 %Visual Properties - Simple
-smiData.Solid(9).mass = 1.0152662606;  % kg
+smiData.Solid(9).mass = 0.035;  % kg
 smiData.Solid(9).CoM = [6.196904 -2.6299549999999998 -246.89323499999998];  % mm
 smiData.Solid(9).MoI = [7.1749999999999998 10.861000000000001 3.9790000000000005];  % kg*mm^2
 smiData.Solid(9).PoI = [-0.47800000000000004 -0 -0];  % kg*mm^2
@@ -526,29 +527,29 @@ smiData.Solid(9).color = [0.647058824 0.647058824 0.647058824];
 smiData.Solid(9).opacity = 0.349019608;
 smiData.Solid(9).ID = "JUD*:*a2a519ca6b99d34d29d34999";
 
-%Inertia Type - Custom
+%Felge
 %Visual Properties - Simple
-smiData.Solid(10).mass = 1;  % lbm
-smiData.Solid(10).CoM = [0 0 0];  % in
-smiData.Solid(10).MoI = [0 0 0];  % lbm*in^2
+smiData.Solid(10).mass = 0.03;  % kg
+smiData.Solid(10).CoM = smiData.RigidTransform(53).translation / 25.4;  % in
+smiData.Solid(10).MoI = [1e-3 1e-3 1e-3];  % lbm*in^2
 smiData.Solid(10).PoI = [0 0 0];  % lbm*in^2
 smiData.Solid(10).color = [0.792156863 0.819607843 0.933333333];
 smiData.Solid(10).opacity = 1.000000000;
 smiData.Solid(10).ID = "JFH*:*3326098a9e403299d41c1625";
 
-%Inertia Type - Custom
+%Reifen
 %Visual Properties - Simple
-smiData.Solid(11).mass = 1;  % lbm
-smiData.Solid(11).CoM = [0 0 0];  % in
+smiData.Solid(11).mass = 0.09;  % lbm
+smiData.Solid(11).CoM = smiData.RigidTransform(54).translation / 25.4;  % in
 smiData.Solid(11).MoI = [0 0 0];  % lbm*in^2
 smiData.Solid(11).PoI = [0 0 0];  % lbm*in^2
 smiData.Solid(11).color = [0.792156863 0.819607843 0.933333333];
 smiData.Solid(11).opacity = 1.000000000;
 smiData.Solid(11).ID = "JFD*:*3326098a9e403299d41c1625";
 
-%Inertia Type - Custom
+%Middle Plate
 %Visual Properties - Simple
-smiData.Solid(12).mass = 1.030965055299999999;  % kg
+smiData.Solid(12).mass = 0.04;  % kg
 smiData.Solid(12).CoM = [6.2021860000000002 -177.45083600000001 1.5];  % mm
 smiData.Solid(12).MoI = [16.317 38.470000000000006 54.741000000000007];  % kg*mm^2
 smiData.Solid(12).PoI = [0 0 -0.0050000000000000001];  % kg*mm^2

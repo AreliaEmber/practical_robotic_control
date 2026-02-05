@@ -58,7 +58,7 @@ unsigned long encoder_sum_at_line_lost = 0;
 bool has_seen_black = false;  // Flag: Hat schwarze Linie bereits gesehen?
 const unsigned long MIN_FOLLOW_TIME = 40000;  // Mindestens 40 Sekunden folgen
 const unsigned long TURN_180_TIME = 6000;  // Zeit für 180° Drehung (in ms)
-const unsigned long FORWARD_5CM_TIME = 3000;  // Zeit für 5cm nach vorne (abgeschätzt erstmal, wird vmtl. etwas anpassung brauchen)
+const unsigned long FORWARD_5CM_TIME = 2500;  // Zeit für 5cm nach vorne (abgeschätzt erstmal, wird vmtl. etwas anpassung brauchen)
 const unsigned long FORWARD_SPEED = 12;
 const unsigned long RIGHT_SPEED = 36;
 const unsigned long LEFT_SPEED = 36;
@@ -262,9 +262,10 @@ void Function::Follow_Mode_Obstacle()
                 obstacle_handling_plan[current_obstacle_step + 1] = OBS_RIGHT;
                 obstacle_handling_plan[current_obstacle_step + 2] = OBS_FORWARD;
                 obstacle_handling_plan[current_obstacle_step + 3] = OBS_FORWARD;
-                obstacle_handling_plan[current_obstacle_step + 4] = OBS_RIGHT;
-                obstacle_handling_plan[current_obstacle_step + 5] = OBS_FORWARD;
-                obstacle_handling_plan[current_obstacle_step + 6] = OBS_LEFT;
+                obstacle_handling_plan[current_obstacle_step + 4] = OBS_FORWARD;
+                obstacle_handling_plan[current_obstacle_step + 5] = OBS_RIGHT;
+                obstacle_handling_plan[current_obstacle_step + 6] = OBS_FORWARD;
+                obstacle_handling_plan[current_obstacle_step + 7] = OBS_LEFT;
             }
             else if (obstacle_handling_plan[current_obstacle_step - 2] == OBS_FORWARD) {
                 obstacle_handling_plan[current_obstacle_step] = OBS_LEFT; 
@@ -273,9 +274,10 @@ void Function::Follow_Mode_Obstacle()
                 obstacle_handling_plan[current_obstacle_step + 3] = OBS_RIGHT;
                 obstacle_handling_plan[current_obstacle_step + 4] = OBS_FORWARD;
                 obstacle_handling_plan[current_obstacle_step + 5] = OBS_FORWARD;
-                obstacle_handling_plan[current_obstacle_step + 6] = OBS_RIGHT;
-                obstacle_handling_plan[current_obstacle_step + 7] = OBS_FORWARD;
-                obstacle_handling_plan[current_obstacle_step + 8] = OBS_LEFT;
+                obstacle_handling_plan[current_obstacle_step + 6] = OBS_FORWARD;
+                obstacle_handling_plan[current_obstacle_step + 7] = OBS_RIGHT;
+                obstacle_handling_plan[current_obstacle_step + 8] = OBS_FORWARD;
+                obstacle_handling_plan[current_obstacle_step + 9] = OBS_LEFT;
             }
             
         }
@@ -283,9 +285,10 @@ void Function::Follow_Mode_Obstacle()
         {
             obstacle_handling_plan[current_obstacle_step] = OBS_FORWARD;
             obstacle_handling_plan[current_obstacle_step + 1] = OBS_FORWARD;
-            obstacle_handling_plan[current_obstacle_step + 2] = OBS_LEFT;
-            obstacle_handling_plan[current_obstacle_step + 3] = OBS_FORWARD;
-            obstacle_handling_plan[current_obstacle_step + 4] = OBS_RIGHT;
+            obstacle_handling_plan[current_obstacle_step + 2] = OBS_FORWARD;
+            obstacle_handling_plan[current_obstacle_step + 3] = OBS_LEFT;
+            obstacle_handling_plan[current_obstacle_step + 4] = OBS_FORWARD;
+            obstacle_handling_plan[current_obstacle_step + 5] = OBS_RIGHT;
         }
     }
     else

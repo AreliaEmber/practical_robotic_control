@@ -241,7 +241,7 @@ void Function::Follow_Mode_Obstacle()
 
     if (current_obstacle_step == 1) // hardcoden von der zeit her weil das einfacher geht
     {
-        if (Ultrasonic.distance_value < SAFE_DISTANCE) // es gibt auch hier ein hindernis
+        if (Ultrasonic.distance_value < SAFE_DISTANCE/2) // es gibt auch hier ein hindernis
         {
             obstacle_handling_plan[current_obstacle_step] = OBS_LEFT;
             obstacle_handling_plan[current_obstacle_step + 1] = OBS_LEFT;
@@ -254,20 +254,21 @@ void Function::Follow_Mode_Obstacle()
     }
     else if (current_obstacle_step == 2 || current_obstacle_step == 3)
     {
-        if (Ultrasonic.distance_value < SAFE_DISTANCE) // es gibt auch hier ein hindernis
+        if (obstacle_handling_plan[current_obstacle_step - 2] == OBS_LEFT) {
+            obstacle_handling_plan[current_obstacle_step] = OBS_FORWARD;
+            obstacle_handling_plan[current_obstacle_step + 1] = OBS_RIGHT;
+            obstacle_handling_plan[current_obstacle_step + 2] = OBS_FORWARD;
+            obstacle_handling_plan[current_obstacle_step + 3] = OBS_FORWARD;
+            obstacle_handling_plan[current_obstacle_step + 4] = OBS_FORWARD;
+            obstacle_handling_plan[current_obstacle_step + 5] = OBS_RIGHT;
+            obstacle_handling_plan[current_obstacle_step + 6] = OBS_FORWARD;
+            obstacle_handling_plan[current_obstacle_step + 7] = OBS_LEFT;
+        }
+        else if (Ultrasonic.distance_value < SAFE_DISTANCE) // es gibt auch hier ein hindernis
         {   
             // sehr viele annahmen über den Form des Obstacles wurden hier getroffen
-            if (obstacle_handling_plan[current_obstacle_step - 2] == OBS_LEFT) {
-                obstacle_handling_plan[current_obstacle_step] = OBS_FORWARD;
-                obstacle_handling_plan[current_obstacle_step + 1] = OBS_RIGHT;
-                obstacle_handling_plan[current_obstacle_step + 2] = OBS_FORWARD;
-                obstacle_handling_plan[current_obstacle_step + 3] = OBS_FORWARD;
-                obstacle_handling_plan[current_obstacle_step + 4] = OBS_FORWARD;
-                obstacle_handling_plan[current_obstacle_step + 5] = OBS_RIGHT;
-                obstacle_handling_plan[current_obstacle_step + 6] = OBS_FORWARD;
-                obstacle_handling_plan[current_obstacle_step + 7] = OBS_LEFT;
-            }
-            else if (obstacle_handling_plan[current_obstacle_step - 2] == OBS_FORWARD) {
+            
+            if (obstacle_handling_plan[current_obstacle_step - 2] == OBS_FORWARD) {
                 obstacle_handling_plan[current_obstacle_step] = OBS_LEFT; 
                 obstacle_handling_plan[current_obstacle_step + 1] = OBS_FORWARD;
                 obstacle_handling_plan[current_obstacle_step + 2] = OBS_FORWARD;

@@ -153,7 +153,9 @@ void Function::Follow_Mode_Startup()
     // Initialisierungsphase beim Start
     dbg_state = 100;  // STARTUP SUCCESS
     Balanced.Stop();
+    Balanced.kd_balance = 0; // truly INSANE disrespect of scope but it's the fastest way to implement this and no one needs to ever see this code again
     delay(2000);
+    Balanced.kd_balance = 0.15;
     Enter_Follow_Mode();
 }
 
